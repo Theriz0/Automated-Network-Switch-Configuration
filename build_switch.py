@@ -2,11 +2,6 @@
 # Author: Skandha Prakash
 # Version: 1.0
 
-# Description: This program is utilized to build leaf switch with
-# data-center specific IP subnet and DHCP IP pool for end-user
-# devices. 
-
-
 import configparser
 import sys
 from ipaddress import ip_network
