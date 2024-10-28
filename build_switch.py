@@ -1,6 +1,10 @@
 # Program: build_switch.py
 # Author: Skandha Prakash
-# Version: 1.0
+# Version: 1.1
+
+# Description: This program is utilized to build leaf switch with
+# data-center specific IP subnet and DHCP IP pool for end-user
+# devices. 
 
 import configparser
 import sys
@@ -11,7 +15,7 @@ def calculate_dhcp_pool_size(ips):
     unique_ips = set(ips)
     return len(unique_ips)
 
-def generate_dhcp_config(dc_name, subnet, vlan, interface):
+def generate_dhcp_config(dc_name, subnet, vlan, ports, interface_type):
     # Split the subnet and mask for configuration purposes
     network = ip_network(subnet, strict=False)
     gateway = str(network.network_address + 1)  # Use the first IP as the gateway
@@ -30,6 +34,13 @@ def generate_dhcp_config(dc_name, subnet, vlan, interface):
     config.append(f" default-router {gateway}")
     config.append(f" dns-server {gateway}")
     config.append(f" lease 0 12")
+    
+     # Add configuration for each specified port
+    for port in ports:
+        config.append(f"\ninterface {interface_type} {port.strip()}")
+        config.append(" switchport mode access")
+        config.append(f" switchport access vlan {vlan}")
+        config.append(" no shutdown")
     
     return "\n".join(config)
 
@@ -50,7 +61,10 @@ def main(dc_name):
     dc_info = switch_conf[dc_name]
     subnet = dc_info.get("NY_subnet")
     vlan = dc_info.get("Vlan")
-    interface = dc_info.get("Interfaces")
+    ports = dc_info.get("Ports", "").split(",")
+    
+    # Default to Gigabit if not specified by user
+    interface_type = dc_info.get("InterfaceType", "GigabitEthernet")
 
     # Collect IPs from devices.conf for DHCP pool calculation
     if dc_name not in devices_conf:
@@ -62,7 +76,7 @@ def main(dc_name):
     dhcp_pool_size = calculate_dhcp_pool_size(ip_list)
 
     # Generate the DHCP configuration
-    dhcp_config = generate_dhcp_config(dc_name, subnet, vlan, interface)
+    dhcp_config = generate_dhcp_config(dc_name, subnet, vlan, ports, interface_type)
 
     # Output the generated configuration
     print(dhcp_config)
