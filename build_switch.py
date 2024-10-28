@@ -1,6 +1,6 @@
 # Program: build_switch.py
 # Author: Skandha Prakash
-# Version: 1.11
+# Version: 1.2
 
 import configparser
 import sys
