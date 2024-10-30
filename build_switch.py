@@ -1,91 +1,51 @@
-# Program: build_switch.py
+# Description: imports all the necessary DHCP config from dhcp_config.py 
+# and runs it as part of the main workflow
+
 # Author: Skandha Prakash
-# Version: 1.2
+# Version: 2.0
 
 import configparser
 import sys
-from ipaddress import ip_network
-
-def calculate_dhcp_pool_size(ips):
-    # Calculate the number of unique IP addresses specified for DHCP
-    unique_ips = set(ips)
-    return len(unique_ips)
-
-def generate_dhcp_config(dc_name, subnet, vlan, ports, interface_type, dhcp_snooping):
-    # Split the subnet and mask for configuration purposes
-    network = ip_network(subnet, strict=False)
-    gateway = str(network.network_address + 1)  # Use the first IP as the gateway
-    
-    # Generate the DHCP pool configuration based on required size
-    config = []
-    config.append(f"! {dc_name} DHCP and VLAN Configuration")
-    config.append(f"ip dhcp excluded-address {gateway}")
-    config.append(f"interface vlan {vlan}")
-    config.append(f" ip address {gateway} {network.netmask}")
-    config.append(" no shutdown\n")
-
-    # DHCP Pool for the subnet
-    config.append(f"ip dhcp pool {dc_name}_pool")
-    config.append(f" network {network.network_address} {network.netmask}")
-    config.append(f" default-router {gateway}")
-    config.append(f" dns-server {gateway}")
-    config.append(f" lease 0 12")
-    
-     # Add configuration for each specified port
-    for port in ports:
-        config.append(f"\ninterface {interface_type} {port.strip()}")
-        config.append(" switchport mode access")
-        config.append(f" switchport access vlan {vlan}")
-        config.append(" no shutdown")
-    
-     # Enable DHCP snooping if specified
-    if dhcp_snooping:
-        config.append("\nip dhcp snooping")
-        config.append(f"ip dhcp snooping vlan {vlan}")
-        config.append("ip dhcp snooping trust")
-        
-        # Set DHCP snooping rate limit for each trusted port
-        for port in ports:
-            config.append(f"interface {interface_type} {port.strip()}")
-            config.append(" ip dhcp snooping limit rate 15")
-    
-    return "\n".join(config)
+from dhcp_config import generate_dhcp_config
 
 def main(dc_name):
-    # Load the configuration files
+    # Load configurations
     switch_conf = configparser.ConfigParser()
     devices_conf = configparser.ConfigParser()
-    
     switch_conf.read("switch.conf")
     devices_conf.read("devices.conf")
     
-    # Check if the given DC exists in switch config
     if dc_name not in switch_conf:
-        print(f"Error: {dc_name} section not found in DC_Switch.conf")
+        print(f"Error: {dc_name} section not found in switch.conf")
         return
 
-    # Get DC-specific configuration
     dc_info = switch_conf[dc_name]
     subnet = dc_info.get("NY_subnet")
     vlan = dc_info.get("Vlan")
     ports = dc_info.get("Ports", "").split(",")
-    # Default to Gigabit if not specified by user
     interface_type = dc_info.get("InterfaceType", "GigabitEthernet")
+    interface_speed = dc_info.get("InterfaceSpeed", "1000")  # Default speed to 1000 if not specified
     dhcp_snooping = dc_info.getboolean("DHCP_Snooping", False)
-
-    # Collect IPs from devices.conf for DHCP pool calculation
+    
     if dc_name not in devices_conf:
         print(f"Error: {dc_name} section not found in devices.conf")
         return
 
-    # Extract IPs from devices.conf for the specified data center
     ip_list = devices_conf[dc_name].get("IPs", "").split(", ")
-    dhcp_pool_size = calculate_dhcp_pool_size(ip_list)
-
-    # Generate the DHCP configuration
-    dhcp_config = generate_dhcp_config(dc_name, subnet, vlan, ports, interface_type, dhcp_snooping)
-
-    # Output the generated configuration
+    
+    dhcp_config, dhcp_pool_size, available_hosts, backup_filename = generate_dhcp_config(
+        dc_name, subnet, vlan, ports, interface_type, interface_speed, dhcp_snooping, ip_list
+    )
+    
+    # Display the result
+    print("\n--- DHCP Configuration Summary ---")
+    print(f"Data Center: {dc_name}")
+    print(f"Subnet: {subnet}")
+    print(f"Available Hosts: {available_hosts}")
+    print(f"Unique IPs for DHCP: {dhcp_pool_size}")
+    if backup_filename:
+        print(f"Backup saved to: {backup_filename}")
+    print("\nGenerated DHCP Configuration:")
     print(dhcp_config)
 
 # Run the script with the data center name as an argument
