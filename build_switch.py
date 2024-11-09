@@ -20,7 +20,7 @@ def main(dc_name):
         return
 
     dc_info = switch_conf[dc_name]
-    subnet = dc_info.get("NY_subnet")
+    subnet = dc_info.get("subnet")
     vlan = dc_info.get("Vlan")
     ports = dc_info.get("Ports", "").split(",")
     interface_type = dc_info.get("InterfaceType", "GigabitEthernet")
