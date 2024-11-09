@@ -34,7 +34,7 @@ def main(dc_name):
     ip_list = devices_conf[dc_name].get("IPs", "").split(", ")
     
     dhcp_config, dhcp_pool_size, available_hosts, backup_filename = generate_dhcp_config(
-        dc_name, subnet, vlan, ports, interface_type, interface_speed, dhcp_snooping, ip_list
+        dc_name, subnet, vlan, ports, interface_type, interface_speed, dhcp_snooping, ip_list, devices_conf
     )
     
     # Display the result
