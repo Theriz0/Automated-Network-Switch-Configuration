@@ -1,4 +1,4 @@
-# Leaf and Spine Network Configuration 2.0
+# Leaf and Spine Network Configuration 2.1
 Description: This program is utilized to build leaf switch with data-center specific IP subnet and DHCP IP pool for end-user devices.
 
 How to run the program:
@@ -15,3 +15,6 @@ Added DHCP snooping for enhanced security to clearly monitor traffic just in cas
 
 Version 2.0:
 Integrated backup functionality so the user can modify or retrieve a lost config back from the backup directory. Added port speed as another configuration for the switch so A specific datacenter can control speed for that particular vlan. Added useful data while compiling informing the user how many hosts can exist for that particular subnet and how many IP devices wil exist for the particular configuration listed from switch.conf
+
+Verson 2.1:
+Program now takes in the full devices listed from devices.conf and what protocols they are allowed to be used for each database.
