@@ -34,7 +34,7 @@ def backup_config(dc_name, config_content):
     return backup_filename
 
 # DHCP configuration generation function
-def generate_dhcp_config(dc_name, subnet, vlan, ports, interface_type, interface_speed, dhcp_snooping, ip_list):
+def generate_dhcp_config(dc_name, subnet, vlan, ports, interface_type, interface_speed, dhcp_snooping, ip_list, devices_conf):
     network = ip_network(subnet, strict=False)
     gateway = str(network.network_address + 1)
     config = []
@@ -51,6 +51,22 @@ def generate_dhcp_config(dc_name, subnet, vlan, ports, interface_type, interface
     config.append(f" default-router {gateway}")
     config.append(f" dns-server {gateway}")
     config.append(" lease 0 12")
+
+    # Device-specific configurations from devices.conf
+    if dc_name in devices_conf:
+        ip_list = devices_conf[dc_name].get("IPs", "").split(", ")
+        device_types = devices_conf[dc_name].get("DeviceType", "").split(", ")
+        allowed_protocols = devices_conf[dc_name].get("AllowedProtocols", "").split(", ")
+
+        for i, ip in enumerate(ip_list):
+            device_type = device_types[i] if i < len(device_types) else "Unknown"
+            protocols = allowed_protocols if allowed_protocols else ["All"]
+
+            # Device-specific IP reservation and description
+            config.append(f"\n! Configuration for {device_type} device at IP {ip}")
+            config.append(f"ip dhcp host {ip}")
+            config.append(f" description {device_type} device")
+            config.append(f" allowed-protocols {', '.join(protocols)}")
     
     for port in ports:
         config.append(f"\ninterface {interface_type} {port.strip()}")
