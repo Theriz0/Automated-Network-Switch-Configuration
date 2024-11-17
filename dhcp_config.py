@@ -1,40 +1,14 @@
 # Description: All DHCP configuration reads both switch.conf and devices.conf here
 # Author: Skandha Prakash
 
-import datetime
-import os
 from ipaddress import ip_network
-
-# Network utility functions
-def calculate_dhcp_pool_size(ips):
-    # Calculate the number of unique IP addresses specified for DHCP.
-    unique_ips = set(ips)
-    return len(unique_ips)
-
-def calculate_available_hosts(subnet):
-    # Calculate the number of usable hosts in a given subnet.
-    network = ip_network(subnet, strict=False)
-    return network.num_addresses - 2  # Subtract 2 for network and broadcast addresses
-
-# Backup configuration function
-def backup_config(dc_name, config_content):
-    # Save the generated DHCP configuration to a backup file.
-    backup_dir = "backup"
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_filename = os.path.join(backup_dir, f"backup_{dc_name}_{timestamp}.cfg")
-    
-    os.makedirs(backup_dir, exist_ok=True)  # Ensure the backup directory exists
-    try:
-        with open(backup_filename, 'w') as backup_file:
-            backup_file.write(config_content)
-        print(f"Backup configuration saved to file: {backup_filename}")
-    except IOError as e:
-        print(f"Error creating backup file {backup_filename}: {e}")
-        return None
-    return backup_filename
+from dhcp_backup import backup_config
+from subnet_calculate import calculate_dhcp_pool_size, calculate_available_hosts 
 
 # DHCP configuration generation function
-def generate_dhcp_config(dc_name, subnet, vlan, ports, interface_type, interface_speed, dhcp_snooping, ip_list, devices_conf):
+def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, interface_speed, 
+                         dhcp_snooping, ip_list, devices_conf, auth_method, admin_role, 
+                         readonly_role, dhcp_start, dhcp_end):
     network = ip_network(subnet, strict=False)
     gateway = str(network.network_address + 1)
     config = []
@@ -44,29 +18,49 @@ def generate_dhcp_config(dc_name, subnet, vlan, ports, interface_type, interface
     config.append(f"ip dhcp excluded-address {gateway}")
     config.append(f"interface vlan {vlan}")
     config.append(f" ip address {gateway} {network.netmask}")
+    config.append(f" default-router {gateway}")
     config.append(" no shutdown\n")
     
     config.append(f"ip dhcp pool {dc_name}_pool")
     config.append(f" network {network.network_address} {network.netmask}")
     config.append(f" default-router {gateway}")
     config.append(f" dns-server {gateway}")
-    config.append(" lease 0 12")
-
+    config.append(f" address range {dhcp_start} {dhcp_end}")
+    
+    # Authorization configuration
+    config.append("\n! Authorization settings")
+    config.append(f"aaa new-model")
+    
+    if auth_method == "RADIUS":
+        config.append("aaa authentication login default group radius local")
+        config.append("aaa authorization exec default group radius if-authenticated")
+    elif auth_method == "TACACS+":
+        config.append("aaa authentication login default group tacacs+ local")
+        config.append("aaa authorization exec default group tacacs+ if-authenticated")
+    else:
+        config.append("aaa authentication login default local")
+    
+    config.append(f"username {admin_role} privilege 15 secret your_secure_password")
+    config.append(f"username {readonly_role} privilege 5 secret your_secure_password")
+    
     # Device-specific configurations from devices.conf
     if dc_name in devices_conf:
         ip_list = devices_conf[dc_name].get("IPs", "").split(", ")
         device_types = devices_conf[dc_name].get("DeviceType", "").split(", ")
         allowed_protocols = devices_conf[dc_name].get("AllowedProtocols", "").split(", ")
+        authorization_levels = devices_conf[dc_name].get("Authorization", "").split(", ")
 
         for i, ip in enumerate(ip_list):
             device_type = device_types[i] if i < len(device_types) else "Unknown"
             protocols = allowed_protocols if allowed_protocols else ["All"]
+            auth_level = authorization_levels[i] if i < len(authorization_levels) else "Unknown"
 
             # Device-specific IP reservation and description
             config.append(f"\n! Configuration for {device_type} device at IP {ip}")
             config.append(f"ip dhcp host {ip}")
             config.append(f" description {device_type} device")
             config.append(f" allowed-protocols {', '.join(protocols)}")
+            config.append(f" authorization-role {auth_level}")
     
     for port in ports:
         config.append(f"\ninterface {interface_type} {port.strip()}")
