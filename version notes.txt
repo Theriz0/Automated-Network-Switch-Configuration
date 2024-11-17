@@ -16,3 +16,6 @@ Added useful data while compiling informing the user how many hosts can exist fo
 
 Verson 2.1: 
 Program now takes in the full devices listed from devices.conf and what protocols they are allowed to be used for each database.
+
+Version 3.0:
+Integrated authorization and admin roles per datacenter for added security measures ensuring authorized users are allowed to access the specified database. Admin roles are implemented for what the user is only allowed to access per database. DHCP has been modified per database in switch.conf to include more devices per datacenter.
