@@ -2,7 +2,7 @@
 # and runs it as part of the main workflow
 
 # Author: Skandha Prakash
-# Version: 3.0
+# Version: 3.1
 
 import configparser
 import sys
@@ -28,16 +28,17 @@ def main(dc_name):
     ports = dc_info.get("Ports", "").split(",")
     interface_type = dc_info.get("InterfaceType", "GigabitEthernet")
     interface_speed = dc_info.get("InterfaceSpeed", "1000")  # Default speed to 1000 if not specified
-    dhcp_snooping = dc_info.getboolean("DHCP_Snooping", False)
     
-    # extract the authorization parameters:
-    auth_method = dc_info.get("Authorization", "Local")
-    admin_role = dc_info.get("AdminRole", "admin")
-    readonly_role = dc_info.get("ReadOnlyRole", "viewer")
-    
-     # Read DHCP start and end IPs
+    # Read DHCP start and end IPs
     dhcp_start = dc_info.get("dhcpStart")
     dhcp_end = dc_info.get("dhcpEnd")
+    
+    # DMZ configurations
+    dmz_subnet = dc_info.get("DMZ")
+    dmz_gateway = dc_info.get("DMZ_Gateway")
+    dmz_vlan = dc_info.get("DMZ_Vlan")
+    webserver_ips = dc_info.get("Webserver_IPs")
+    dmz_ports = dc_info.get("DMZ_ports", "").split(",")
     
     if dc_name not in devices_conf:
         print(f"Error: {dc_name} section not found in devices.conf")
@@ -47,20 +48,21 @@ def main(dc_name):
     
     dhcp_config, dhcp_pool_size, available_hosts, backup_filename = generate_dhcp_config(
         dc_name, subnet, gateway, vlan, ports, interface_type, interface_speed, 
-        dhcp_snooping, ip_list, devices_conf, auth_method, admin_role, 
-        readonly_role, dhcp_start, dhcp_end
+        ip_list, devices_conf, dhcp_start, dhcp_end, dmz_subnet, 
+        dmz_gateway, dmz_vlan, webserver_ips, dmz_ports
     )
     
     # Display the result
     print("\n--- DHCP Configuration Summary ---")
     print(f"Data Center: {dc_name}")
-    print(f"Authorization Method: {auth_method}")
-    print(f"Admin Role: {admin_role}")
-    print(f"Read-Only Role: {readonly_role}")
     print(f"Subnet: {subnet}")
     print(f"Gateway: {gateway}")
     print(f"Available Hosts: {available_hosts}")
     print(f"Unique IPs for DHCP: {dhcp_pool_size}")
+    print(f"DMZ Subnet: {dmz_subnet}")
+    print(f"DMZ Gateway: {dmz_gateway}")
+    print(f"DMZ VLAN: {dmz_vlan}")
+    print(f"Webserver IP Range: {webserver_ips}")
     if backup_filename:
         print(f"Backup saved to: {backup_filename}")
     print("\nGenerated DHCP Configuration:")
