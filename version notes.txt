@@ -19,3 +19,6 @@ Program now takes in the full devices listed from devices.conf and what protocol
 
 Version 3.0:
 Integrated authorization and admin roles per datacenter for added security measures ensuring authorized users are allowed to access the specified database. Admin roles are implemented for what the user is only allowed to access per database. DHCP has been modified per database in switch.conf to include more devices per datacenter.
+
+Version 3.1:
+Removed authorization and admin roles as I am planning for better authorization and authentication for the active directory later on. Added DMZ configurations to introduce web servers per datacenter. reorganized every subnet per database to use the same subnet but split up per datacenter in a more effective /24 network.
