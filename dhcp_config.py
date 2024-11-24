@@ -7,8 +7,8 @@ from subnet_calculate import calculate_dhcp_pool_size, calculate_available_hosts
 
 # DHCP configuration generation function
 def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, interface_speed, 
-                         dhcp_snooping, ip_list, devices_conf, auth_method, admin_role, 
-                         readonly_role, dhcp_start, dhcp_end):
+                          ip_list, devices_conf, dhcp_start, dhcp_end, dmz_subnet, dmz_gateway, dmz_vlan,
+                          webserver_ips, dmz_ports):
     network = ip_network(subnet, strict=False)
     gateway = str(network.network_address + 1)
     config = []
@@ -26,22 +26,6 @@ def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, 
     config.append(f" default-router {gateway}")
     config.append(f" dns-server {gateway}")
     config.append(f" address range {dhcp_start} {dhcp_end}")
-    
-    # Authorization configuration
-    config.append("\n! Authorization settings")
-    config.append(f"aaa new-model")
-    
-    if auth_method == "RADIUS":
-        config.append("aaa authentication login default group radius local")
-        config.append("aaa authorization exec default group radius if-authenticated")
-    elif auth_method == "TACACS+":
-        config.append("aaa authentication login default group tacacs+ local")
-        config.append("aaa authorization exec default group tacacs+ if-authenticated")
-    else:
-        config.append("aaa authentication login default local")
-    
-    config.append(f"username {admin_role} privilege 15 secret your_secure_password")
-    config.append(f"username {readonly_role} privilege 5 secret your_secure_password")
     
     # Device-specific configurations from devices.conf
     if dc_name in devices_conf:
@@ -69,13 +53,26 @@ def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, 
         config.append(f" speed {interface_speed}")
         config.append(" no shutdown")
     
-    if dhcp_snooping:
-        config.append("\nip dhcp snooping")
-        config.append(f"ip dhcp snooping vlan {vlan}")
-        config.append("ip dhcp snooping trust")
-        for port in ports:
-            config.append(f"interface {interface_type} {port.strip()}")
-            config.append(" ip dhcp snooping limit rate 15")
+    # DMZ Configuration
+    if dmz_subnet and dmz_gateway and dmz_vlan:
+        dmz_network = ip_network(dmz_subnet, strict=False)
+        config.append(f"\n! DMZ Configuration for {dc_name}")
+        config.append(f"interface vlan {dmz_vlan}")
+        config.append(f" ip address {dmz_gateway} {dmz_network.netmask}")
+        config.append(" no shutdown\n")
+
+        config.append(f"ip dhcp pool {dc_name}_dmz_pool")
+        config.append(f" network {dmz_network.network_address} {dmz_network.netmask}")
+        config.append(f" default-router {dmz_gateway}")
+        config.append(f" address range {webserver_ips.split(' - ')[0]} {webserver_ips.split(' - ')[1]}")
+
+        # Add port configurations for the DMZ VLAN
+        for dmz_port in dmz_ports:
+            config.append(f"\ninterface {interface_type} {dmz_port.strip()}")
+            config.append(" switchport mode access")
+            config.append(f" switchport access vlan {dmz_vlan}")
+            config.append(f" speed {interface_speed}")
+            config.append(" no shutdown")
     
     # Calculate DHCP pool size and available hosts
     dhcp_pool_size = calculate_dhcp_pool_size(ip_list)
