@@ -61,11 +61,6 @@ def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, 
         config.append(f" ip address {dmz_gateway} {dmz_network.netmask}")
         config.append(" no shutdown\n")
 
-        config.append(f"ip dhcp pool {dc_name}_dmz_pool")
-        config.append(f" network {dmz_network.network_address} {dmz_network.netmask}")
-        config.append(f" default-router {dmz_gateway}")
-        config.append(f" address range {webserver_ips.split(' - ')[0]} {webserver_ips.split(' - ')[1]}")
-
         # Add port configurations for the DMZ VLAN
         for dmz_port in dmz_ports:
             config.append(f"\ninterface {interface_type} {dmz_port.strip()}")
@@ -73,7 +68,12 @@ def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, 
             config.append(f" switchport access vlan {dmz_vlan}")
             config.append(f" speed {interface_speed}")
             config.append(" no shutdown")
-    
+
+            config.append(f"ip dhcp pool {dc_name}_dmz_pool")
+            config.append(f" network {dmz_network.network_address} {dmz_network.netmask}")
+            config.append(f" default-router {dmz_gateway}")
+            config.append(f" address range {webserver_ips.split(' - ')[0]} {webserver_ips.split(' - ')[1]}")
+          
     # Calculate DHCP pool size and available hosts
     dhcp_pool_size = calculate_dhcp_pool_size(ip_list)
     available_hosts = calculate_available_hosts(subnet)
