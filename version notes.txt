@@ -22,3 +22,6 @@ Integrated authorization and admin roles per datacenter for added security measu
 
 Version 3.1:
 Removed authorization and admin roles as I am planning for better authorization and authentication for the active directory later on. Added DMZ configurations to introduce web servers per datacenter. reorganized every subnet per database to use the same subnet but split up per datacenter in a more effective /24 network.
+
+Version 3.2:
+More configurations added for DMZ to integrate web servers for users and apache configuration for users to log onto said web servers and load balancers for these servers. Added application servers for users to access as well as an active directory(no authorization/authentication yet) for users logging into a specified datacenter with the appropriate loadbalancers as well. Added database servers as part of the application servr configuration for more confiiguration per application.
