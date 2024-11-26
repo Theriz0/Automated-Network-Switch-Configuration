@@ -8,7 +8,9 @@ from subnet_calculate import calculate_dhcp_pool_size, calculate_available_hosts
 # DHCP configuration generation function
 def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, interface_speed, 
                           ip_list, devices_conf, dhcp_start, dhcp_end, dmz_subnet, dmz_gateway, dmz_vlan,
-                          webserver_ips, dmz_ports):
+                          webserver_ips, dmz_ports, apache_servers, load_balancers, app_vlan, app_gateway, 
+                          app_subnet, app_ports, app_ips, app_applications,
+                          active_directories, database_servers, app_load_balancers):
     network = ip_network(subnet, strict=False)
     gateway = str(network.network_address + 1)
     config = []
@@ -61,6 +63,11 @@ def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, 
         config.append(f" ip address {dmz_gateway} {dmz_network.netmask}")
         config.append(" no shutdown\n")
 
+        config.append(f"ip dhcp pool {dc_name}_dmz_pool")
+        config.append(f" network {dmz_network.network_address} {dmz_network.netmask}")
+        config.append(f" default-router {dmz_gateway}")
+        config.append(f" address range {webserver_ips.split(' - ')[0]} {webserver_ips.split(' - ')[1]}")
+        
         # Add port configurations for the DMZ VLAN
         for dmz_port in dmz_ports:
             config.append(f"\ninterface {interface_type} {dmz_port.strip()}")
@@ -68,12 +75,51 @@ def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, 
             config.append(f" switchport access vlan {dmz_vlan}")
             config.append(f" speed {interface_speed}")
             config.append(" no shutdown")
+            
+        # Apache Server Configuration
+        config.append(f"\n! Apache Server Configuration for {dc_name}")
+        config.append(f" address range {apache_servers}")
+    
+        # Load Balancer Configuration
+        config.append(f"\n! Load Balancer Configuration for {dc_name}")
+        config.append(f" address range {load_balancers}")
+    
+    # App_VLAN Configuration
+    if app_subnet and app_gateway and app_vlan:
+        app_network = ip_network(app_subnet, strict=False)
+        config.append(f"\n! App_VLAN Configuration for {dc_name}")
+        config.append(f"interface vlan {app_vlan}")
+        config.append(f" ip address {app_gateway} {app_network.netmask}")
+        config.append(" no shutdown\n")
 
-            config.append(f"ip dhcp pool {dc_name}_dmz_pool")
-            config.append(f" network {dmz_network.network_address} {dmz_network.netmask}")
-            config.append(f" default-router {dmz_gateway}")
-            config.append(f" address range {webserver_ips.split(' - ')[0]} {webserver_ips.split(' - ')[1]}")
-          
+        config.append(f"ip dhcp pool {dc_name}_app_pool")
+        config.append(f" network {app_network.network_address} {app_network.netmask}")
+        config.append(f" default-router {app_gateway}")
+        config.append(f" address range {app_ips.split(' - ')[0]} {app_ips.split(' - ')[1]}")
+        
+        # Add port configurations for the App VLAN
+        for app_port in app_ports:
+            config.append(f"\ninterface {interface_type} {app_port.strip()}")
+            config.append(" switchport mode access")
+            config.append(f" switchport access vlan {app_vlan}")
+            config.append(f" speed {interface_speed}")
+            config.append(" no shutdown")
+            
+        # Active Directory Configuration
+        config.append(f"\n! Active Directory Configuration for {dc_name}")
+        config.append(f" address range {active_directories.split(' - ')[0]} {active_directories.split(' - ')[1]}")
+        
+        # Database Server Configuration
+        config.append(f"\n! Database Server Configuration for {dc_name}")
+        config.append(f" address range {database_servers.split(' - ')[0]} {database_servers.split(' - ')[1]}")
+        
+        # App Load Balancer Configuration
+        config.append(f"\n! App Load Balancer Configuration for {dc_name}")
+        config.append(f" address range {app_load_balancers.split(' - ')[0]} {app_load_balancers.split(' - ')[1]}")
+
+        # Applications hosted on App VLAN
+        config.append(f"\n! Applications hosted on App_VLAN: {app_applications}")    
+        
     # Calculate DHCP pool size and available hosts
     dhcp_pool_size = calculate_dhcp_pool_size(ip_list)
     available_hosts = calculate_available_hosts(subnet)
