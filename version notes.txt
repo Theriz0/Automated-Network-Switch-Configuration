@@ -25,3 +25,6 @@ Removed authorization and admin roles as I am planning for better authorization 
 
 Version 3.2:
 More configurations added for DMZ to integrate web servers for users and apache configuration for users to log onto said web servers and load balancers for these servers. Added application servers for users to access as well as an active directory(no authorization/authentication yet) for users logging into a specified datacenter with the appropriate loadbalancers as well. Added database servers as part of the application servr configuration for more confiiguration per application.
+
+Version 4.0:
+reworked devices.conf to support gateways for each server as well as appropriate authorization protocols per datacenter switch.
