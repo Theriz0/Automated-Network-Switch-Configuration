@@ -35,6 +35,9 @@ def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, 
         device_types = devices_conf[dc_name].get("DeviceType", "").split(", ")
         allowed_protocols = devices_conf[dc_name].get("AllowedProtocols", "").split(", ")
         authorization_levels = devices_conf[dc_name].get("Authorization", "").split(", ")
+        dhcp_gateway = devices_conf[dc_name].get("DHCP_Gateway", "None")
+        dmz_gateway = devices_conf[dc_name].get("DMZ_Gateway", "None")
+        app_gateway = devices_conf[dc_name].get("App_Gateway", "None")
 
         for i, ip in enumerate(ip_list):
             device_type = device_types[i] if i < len(device_types) else "Unknown"
@@ -47,6 +50,21 @@ def generate_dhcp_config(dc_name, subnet, gateway, vlan, ports, interface_type, 
             config.append(f" description {device_type} device")
             config.append(f" allowed-protocols {', '.join(protocols)}")
             config.append(f" authorization-role {auth_level}")
+            
+            # DHCP Gateway Configuration
+            if dhcp_gateway and dhcp_gateway != "None":
+                config.append(f"\n! DHCP Gateway Configuration for {dc_name}")
+                config.append(f"ip default-gateway {dhcp_gateway}")
+            
+            # DMZ Gateway Configuration
+            if dmz_gateway and dmz_gateway != "None":
+                config.append(f"\n! DMZ Gateway Configuration for {dc_name}")
+                config.append(f"ip default-gateway {dmz_gateway}")
+
+            # App Gateway Configuration
+            if app_gateway and app_gateway != "None":
+                config.append(f"\n! Application Gateway Configuration for {dc_name}")
+                config.append(f"ip route {app_gateway}")
     
     for port in ports:
         config.append(f"\ninterface {interface_type} {port.strip()}")
