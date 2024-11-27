@@ -2,7 +2,7 @@
 # and runs it as part of the main workflow
 
 # Author: Skandha Prakash
-# Version: 3.2
+# Version: 4.0
 
 import configparser
 import sys
